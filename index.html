@@ -1,0 +1,862 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Retail IQ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: sticky header with a scrolling tab bar; one panel per analysis stage.
+   Every panel pairs real notebook charts (on white figure cards) with small interactive views built from the notebook's own numbers. */
+:root {
+  --bg: #F5F4FA; --surface: #FFFFFF; --fg: #17152B; --muted: #5E5B78; --line: #DDDAEC; --track: #E7E5F2;
+  --accent: #5B3FD9; --accent-soft: #E9E4FB; --teal: #0C8F7F; --teal-ink: #0A6F63; --teal-soft: #DAF2EE;
+  --amber: #B45309; --amber-soft: #FBEBD5;
+  --font-display: 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F0E19; --surface: #171627; --fg: #ECEAF8; --muted: #A5A2BF; --line: #2C2A42; --track: #26243B;
+    --accent: #A594FF; --accent-soft: #272150; --teal: #3FCDB9; --teal-ink: #4AD6C2; --teal-soft: #10312D;
+    --amber: #F2A65A; --amber-soft: #3A2812; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F0E19; --surface: #171627; --fg: #ECEAF8; --muted: #A5A2BF; --line: #2C2A42; --track: #26243B;
+  --accent: #A594FF; --accent-soft: #272150; --teal: #3FCDB9; --teal-ink: #4AD6C2; --teal-soft: #10312D;
+  --amber: #F2A65A; --amber-soft: #3A2812; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 400 16px/1.6 var(--font-body); -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--bg); }
+.wrap { max-width: 1180px; margin-inline: auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3, h4 { font-family: var(--font-display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+p { margin: 0; }
+a { color: var(--accent); }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+.mono { font-family: var(--font-mono); }
+
+/* header and tabs */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); border-bottom: 1px solid var(--line); }
+.top .wrap { display: flex; align-items: center; gap: 0 1.5rem; padding-block: 0.5rem 0; flex-wrap: wrap; }
+.brand { font: 700 1.1rem var(--font-display); padding-bottom: 0.5rem; }
+.brand span { color: var(--accent); }
+.brand small { font: 400 0.72rem var(--font-mono); color: var(--muted); margin-left: 0.6rem; letter-spacing: 0.04em; }
+.tabs { display: flex; gap: 0.15rem; overflow-x: auto; min-width: 0; flex: 1 1 520px; scrollbar-width: thin; }
+.tab { background: none; border: 0; border-bottom: 3px solid transparent; padding: 0.55rem 0.8rem; font: 500 0.86rem var(--font-body); color: var(--muted); white-space: nowrap; }
+.tab:hover { color: var(--fg); }
+.tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+main { min-height: 70vh; }
+.panel { padding-block: 2.25rem 4rem; }
+.panel[hidden] { display: none; }
+@media (prefers-reduced-motion: no-preference) { .panel { animation: rise .25s ease-out; } @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } } }
+
+.kicker { font: 500 0.74rem var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--teal-ink); }
+.ph h2 { font-size: clamp(1.7rem, 3.6vw, 2.4rem); line-height: 1.12; margin-top: 0.4rem; }
+.ph p { margin-top: 0.8rem; max-width: 70ch; color: var(--muted); }
+.src { max-width: 100%; overflow-wrap: anywhere; display: inline-block; margin-top: 0.9rem; font: 400 0.74rem var(--font-mono); color: var(--muted); padding: 0.2rem 0.6rem; border: 1px solid var(--line); border-radius: 99px; }
+.verdict { display: inline-block; margin-top: 0.9rem; margin-left: 0.4rem; font: 500 0.74rem var(--font-mono); padding: 0.2rem 0.65rem; border-radius: 99px; background: var(--amber-soft); color: var(--amber); }
+.verdict.ok { background: var(--teal-soft); color: var(--teal-ink); }
+
+/* generic blocks */
+.stats { margin-top: 1.75rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 0.85rem 1rem; min-width: 0; }
+.stat b { display: block; font: 700 clamp(1.15rem, 2.4vw, 1.5rem)/1.15 var(--font-display); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.stat span { display: block; margin-top: 0.3rem; font: 400 0.68rem var(--font-mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.25rem; margin-top: 1.5rem; align-items: start; }
+.grid21 { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 1.25rem; margin-top: 1.5rem; align-items: start; }
+@media (max-width: 860px) { .grid2, .grid21 { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 1.15rem; min-width: 0; }
+.card h3 { font: 500 0.72rem var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.9rem; }
+.card h4 { font-size: 1.05rem; margin-bottom: 0.5rem; }
+.note { margin-top: 0.8rem; font-size: 0.84rem; color: var(--muted); line-height: 1.5; }
+.sec { margin-top: 2.5rem; }
+.sec > h3 { font-size: 1.25rem; }
+.sec > p { margin-top: 0.5rem; max-width: 70ch; color: var(--muted); }
+.callout { margin-top: 1.5rem; padding: 1rem 1.2rem; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 8px 8px 0; max-width: 80ch; }
+.tw { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: 0.88rem; }
+th { font: 500 0.66rem var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; text-align: left; color: var(--muted); padding: 0.45rem 0.7rem 0.45rem 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 0.5rem 0.7rem 0.5rem 0; border-bottom: 1px solid var(--line); }
+th.n, td.n { text-align: right; padding-right: 0; padding-left: 0.7rem; }
+tr.hl td { background: var(--accent-soft); }
+tr.row-click { cursor: pointer; }
+tr.row-click:hover td { background: var(--track); }
+tr.row-click.hl:hover td { background: var(--accent-soft); }
+
+/* figures */
+.fig { margin: 0; min-width: 0; }
+.fig .frame { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 6px; }
+.fig img { display: block; width: 100%; height: auto; cursor: zoom-in; }
+.fig figcaption { margin-top: 0.5rem; font-size: 0.8rem; color: var(--muted); line-height: 1.45; }
+.fig figcaption code { font: 400 0.72rem var(--font-mono); color: var(--teal-ink); }
+.figs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 1.5rem 1.25rem; margin-top: 1.25rem; }
+
+/* chips and controls */
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 1rem; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 0.3rem 0.8rem; font: 500 0.8rem var(--font-body); color: var(--muted); }
+.chip:hover { border-color: var(--accent); color: var(--fg); }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+:root[data-theme="dark"] .chip[aria-pressed="true"] { color: #0F0E19; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .chip[aria-pressed="true"] { color: #0F0E19; } }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { background: var(--surface); border: 0; padding: 0.35rem 0.85rem; font-size: 0.8rem; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.readout { min-height: 3.1rem; margin-top: 0.8rem; padding: 0.55rem 0.8rem; background: var(--bg); border-radius: 8px; font: 400 0.8rem/1.5 var(--font-mono); color: var(--muted); }
+.readout b { color: var(--fg); font-weight: 500; }
+.legend { display: flex; flex-wrap: wrap; gap: 0.3rem 1.2rem; margin-top: 0.8rem; font-size: 0.78rem; color: var(--muted); }
+.legend i { display: inline-block; width: 11px; height: 11px; border-radius: 2px; margin-right: 0.4rem; vertical-align: -1px; }
+
+/* svg charts */
+svg.ch { display: block; width: 100%; height: auto; overflow: visible; }
+svg.ch text { fill: var(--muted); font: 400 11px var(--font-mono); }
+svg.ch .grid { stroke: var(--line); stroke-width: 1; }
+svg.ch .axis { stroke: var(--muted); stroke-width: 1; }
+svg.ch .hit { fill: transparent; cursor: crosshair; }
+svg.ch .bar-o { fill: var(--accent); }
+svg.ch .bar-e { fill: var(--teal); }
+svg.ch .hot { opacity: 1; }
+svg.ch .dim { opacity: 0.45; }
+
+/* horizontal bars */
+.hb { display: grid; grid-template-columns: minmax(0, 13rem) minmax(0, 1fr) 6.5rem; align-items: center; gap: 0.2rem 0.75rem; padding-block: 0.36rem; }
+.hb .l { font-size: 0.85rem; line-height: 1.3; }
+.hb .t { height: 10px; background: var(--track); border-radius: 3px; overflow: hidden; }
+.hb .t i { display: block; height: 100%; min-width: 3px; background: var(--accent); border-radius: 3px; }
+.hb .t i.teal { background: var(--teal); } .hb .t i.amber { background: var(--amber); }
+.hb .v { font: 500 0.8rem var(--font-mono); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (max-width: 560px) { .hb { grid-template-columns: minmax(0, 1fr) auto; } .hb .t { grid-column: 1 / -1; grid-row: 2; } }
+
+/* overview */
+.hero { padding-block: 2.5rem 1rem; }
+.hero h1 { font-size: clamp(2.1rem, 5.2vw, 3.5rem); line-height: 1.06; margin-top: 0.8rem; max-width: 18ch; }
+.hero .lead { margin-top: 1.2rem; max-width: 64ch; font-size: 1.06rem; }
+.team { margin-top: 1.2rem; font: 400 0.8rem/1.8 var(--font-mono); color: var(--muted); }
+.team b { color: var(--fg); font-weight: 500; }
+.flow { margin: 1.75rem 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.75rem; }
+.flow button { width: 100%; height: 100%; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 0.95rem 1rem; }
+.flow button:hover { border-color: var(--accent); }
+.flow b { display: block; font: 600 1rem var(--font-display); }
+.flow span { display: block; margin-top: 0.35rem; font-size: 0.83rem; color: var(--muted); line-height: 1.45; }
+.flow em { display: block; margin-top: 0.6rem; font: 500 0.78rem var(--font-mono); font-style: normal; color: var(--accent); }
+.findings { list-style: none; margin: 0; padding: 0; counter-reset: f; }
+.findings li { counter-increment: f; display: grid; grid-template-columns: 2rem minmax(0, 1fr); padding-block: 0.8rem; border-top: 1px solid var(--line); }
+.findings li:last-child { border-bottom: 1px solid var(--line); }
+.findings li::before { content: counter(f); font: 500 0.8rem var(--font-mono); color: var(--accent); padding-top: 0.2rem; }
+.findings b { display: block; font: 600 1rem var(--font-display); }
+.findings span { color: var(--muted); font-size: 0.9rem; }
+.limits { margin: 1rem 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 2.5rem; }
+@media (max-width: 760px) { .limits { grid-template-columns: minmax(0, 1fr); } }
+.limits li { padding-block: 0.7rem; border-top: 1px solid var(--line); font-size: 0.92rem; }
+.limits b { font-weight: 600; }
+
+/* dashboard viewer */
+.pbi { margin-top: 1.5rem; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); }
+.pbi-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.4rem 1rem; padding: 0.55rem 0.9rem; background: var(--track); font: 400 0.76rem var(--font-mono); color: var(--muted); }
+.pbi-canvas { background: #F5F4FA; padding: 0; }
+.pbi-canvas img { display: block; width: 100%; height: auto; cursor: zoom-in; }
+.pbi-tabs { display: flex; gap: 0; overflow-x: auto; border-top: 1px solid var(--line); background: var(--track); }
+.pbi-tabs button { border: 0; border-right: 1px solid var(--line); background: transparent; padding: 0.6rem 1.1rem; font-size: 0.84rem; color: var(--muted); white-space: nowrap; }
+.pbi-tabs button[aria-selected="true"] { background: var(--surface); color: var(--accent); font-weight: 600; box-shadow: inset 0 -3px 0 var(--accent); }
+
+/* slides */
+.deck { margin-top: 1.5rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.75rem; }
+.deck-main { background: #fff; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.deck-main img { display: block; width: 100%; height: auto; cursor: zoom-in; }
+.deck-ctl { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.deck-ctl button { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 0.45rem 1rem; }
+.deck-ctl button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.deck-ctl button:disabled { opacity: 0.4; cursor: default; }
+.deck-ctl span { font: 500 0.85rem var(--font-mono); color: var(--muted); }
+.thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 0.5rem; }
+.deck > *, .thumbs button { min-width: 0; }
+.thumbs button { padding: 0; border: 2px solid var(--line); border-radius: 6px; overflow: hidden; background: #fff; }
+.thumbs button[aria-current="true"] { border-color: var(--accent); }
+.thumbs img { display: block; width: 100%; height: auto; }
+
+/* explorers */
+.sp { display: grid; gap: 4px; margin-top: 0.4rem; }
+.sp .t { height: 10px; background: var(--track); border-radius: 3px; overflow: hidden; }
+.sp .t i { display: block; height: 100%; min-width: 2px; }
+.search { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.search input { flex: 1 1 160px; min-width: 0; padding: 0.5rem 0.75rem; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); font: 400 0.95rem var(--font-mono); }
+.search button { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 0.5rem 1.1rem; font-weight: 600; }
+:root[data-theme="dark"] .search button { color: #0F0E19; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .search button { color: #0F0E19; } }
+.iv { position: relative; height: 62px; margin-top: 0.8rem; }
+.iv .tr { position: absolute; left: 0; right: 0; top: 20px; height: 6px; background: var(--track); border-radius: 3px; }
+.iv .rg { position: absolute; top: 15px; height: 16px; background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 4px; }
+.iv .mn { position: absolute; top: 9px; width: 3px; height: 28px; background: var(--accent); margin-left: -1px; border-radius: 2px; }
+.iv .ivl { position: absolute; top: 42px; font: 400 0.7rem var(--font-mono); color: var(--muted); white-space: nowrap; }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+/* lightbox */
+.lb { position: fixed; inset: 0; z-index: 50; background: rgba(10, 9, 20, 0.88); display: none; align-items: center; justify-content: center; padding: 3rem 1rem 1rem; }
+.lb.on { display: flex; }
+.lb img { max-width: 100%; max-height: 100%; background: #fff; border-radius: 6px; }
+.lb button { position: absolute; top: calc(0.8rem + env(safe-area-inset-top, 0px)); right: 1rem; background: #fff; color: #17152B; border: 0; border-radius: 8px; padding: 0.4rem 0.9rem; font-weight: 600; }
+footer { border-top: 1px solid var(--line); padding-block: 2rem 3rem; color: var(--muted); font-size: 0.85rem; }
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">Retail <span>IQ</span><small>Online Retail II · 2009–2011</small></div>
+    <div class="tabs" role="tablist" aria-label="Project sections" id="tabs"></div>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- OVERVIEW -->
+<section class="panel" id="p-overview" role="tabpanel" hidden>
+  <div class="hero">
+    <div class="kicker">Applied Probability Distributions · Project</div>
+    <h1>Probabilistic Modelling of Customer Purchasing Behaviour</h1>
+    <p class="lead">A study of 36,594 invoices and 5,852 customers from the Online Retail II dataset. Each tab holds the original notebook outputs for one stage: distribution fitting, customer segments, lifetime value and a Monte Carlo revenue forecast, plus the Power BI dashboard and the project slides.</p>
+    <p class="team"><b>Pranjal · Arnab · Aarya · Mahek</b><br>Symbiosis Statistical Institute · AY 2026–27 · Python and Power BI</p>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>802,555</b><span>Cleaned product lines</span></div>
+    <div class="stat"><b>36,594</b><span>Valid invoices</span></div>
+    <div class="stat"><b>5,852</b><span>Customers</span></div>
+    <div class="stat"><b>£17.43M</b><span>Recorded sales</span></div>
+    <div class="stat"><b>9</b><span>Mixture segments</span></div>
+  </div>
+  <div class="sec">
+    <h3>Pick a stage</h3>
+    <ul class="flow" id="flow"></ul>
+  </div>
+  <div class="grid2">
+    <div>
+      <h3 style="font-size:1.25rem;margin-bottom:0.9rem">Key findings</h3>
+      <ol class="findings">
+        <li><div><b>Counts are heterogeneous</b><span>Poisson dispersion is 1.98 and the fit is rejected.</span></div></li>
+        <li><div><b>Spending is strongly right-skewed</b><span>Lognormal AIC 518,591 is lower than Gamma AIC 524,482.</span></div></li>
+        <li><div><b>Nine customer segments</b><span>95.27% average assignment confidence.</span></div></li>
+        <li><div><b>Segmentation helps CLV prediction</b><span>28.4% lower MAE than the one-group baseline.</span></div></li>
+        <li><div><b>Forecast uncertainty is quantified</b><span>12-month simulated mean £8.68M, 95% range £8.46M to £8.90M.</span></div></li>
+      </ol>
+    </div>
+    <div>
+      <h3 style="font-size:1.25rem">What the results do and do not show</h3>
+      <ul class="limits" style="grid-template-columns:minmax(0,1fr)">
+        <li><b>UK-weighted.</b> The UK accounts for £14.62M of £17.43M in sales.</li>
+        <li><b>Boundary months.</b> The first and last of 25 months are incomplete.</li>
+        <li><b>Separate AIC scales.</b> Poisson, Geometric and invoice-value AICs describe different outcomes and cannot be compared.</li>
+        <li><b>Backtest under-predicts.</b> The segment CLV model is 35.2% below actual revenue in the holdout months.</li>
+        <li><b>Model-based range.</b> The Monte Carlo interval comes from the fitted models, not from out-of-sample accuracy.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- DASHBOARD -->
+<section class="panel" id="p-dashboard" role="tabpanel" hidden>
+  <div class="ph">
+    <div class="kicker">Power BI</div>
+    <h2>Retail IQ dashboard</h2>
+    <p>The four report pages as they appear in Power BI. Pick a page from the tabs at the bottom, and click the page to view it full size. These are exported page images, so slicers and filters do not respond here; open the .pbix file in Power BI Desktop for those.</p>
+    <span class="src">retail_dashboard.pbix · exported pages</span>
+  </div>
+  <div class="pbi">
+    <div class="pbi-bar"><span id="pbi-title">Page 1 of 4 · Overview</span><span>Filters on the page: Year, Country, Order date</span></div>
+    <div class="pbi-canvas"><img id="pbi-img" class="zoom" src="img/dash-1.jpg" width="2000" height="1151" alt="Retail IQ overview page"></div>
+    <div class="pbi-tabs" role="tablist" aria-label="Report pages" id="pbi-tabs"></div>
+  </div>
+  <div class="grid2" id="pbi-notes"></div>
+</section>
+
+<!-- DATA & EDA -->
+<section class="panel" id="p-data" role="tabpanel" hidden>
+  <div class="ph">
+    <div class="kicker">Data and exploratory analysis</div>
+    <h2>From 1,067,371 raw lines to 802,555 merchandise lines</h2>
+    <p>Most of the loss came in the first cleaning step. Four later steps removed 345 lines of carriage fees, test products, accounting adjustments and next-day carriage entries. Plausible duplicates and large orders were kept and flagged.</p>
+    <span class="src">finalize_online_retail.py · EDA.ipynb</span>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3>Lines remaining after each step</h3>
+      <div id="clean-bars"></div>
+      <p class="note">Kept on purpose: 26,055 repeated lines across 24,647 groups, 799 high-value lines and 36 high-value invoices, and 1,671 customers with no repeat purchase for timing analysis.</p>
+    </div>
+    <div class="card">
+      <h3>Four analytical datasets</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Level</th><th class="n">Records</th><th>Used for</th></tr></thead>
+        <tbody>
+          <tr><td>Product line</td><td class="n">802,555</td><td>Exploratory analysis</td></tr>
+          <tr><td>Invoice</td><td class="n">36,594</td><td>Gamma and Lognormal</td></tr>
+          <tr><td>Customer</td><td class="n">5,852</td><td>Mixture, CLV, simulation</td></tr>
+          <tr><td>Customer-month</td><td class="n">56,944</td><td>Poisson counts</td></tr>
+        </tbody></table></div>
+      <p class="note">Scope is positive merchandise sales. Amounts are gross invoice values, not net of returns.</p>
+    </div>
+  </div>
+  <div class="sec">
+    <h3>Descriptive statistics</h3>
+    <div class="card" style="margin-top:1rem"><div class="tw"><table>
+      <thead><tr><th>Variable</th><th class="n">Mean</th><th class="n">Median</th><th class="n">Variance</th><th class="n">Std. dev.</th><th class="n">Skewness</th></tr></thead>
+      <tbody>
+        <tr><td>Product quantity</td><td class="n">13.32</td><td class="n">5.00</td><td class="n">20,700.25</td><td class="n">143.88</td><td class="n">405.88</td></tr>
+        <tr><td>Line amount (£)</td><td class="n">21.72</td><td class="n">11.80</td><td class="n">49,542.74</td><td class="n">222.58</td><td class="n">599.92</td></tr>
+        <tr><td>Invoice amount (£)</td><td class="n">476.40</td><td class="n">304.64</td><td class="n">1,888,534</td><td class="n">1,374.24</td><td class="n">60.27</td></tr>
+        <tr><td>Purchase count</td><td class="n">6.25</td><td class="n">3.00</td><td class="n">162.54</td><td class="n">12.75</td><td class="n">12.04</td></tr>
+        <tr><td>Customer total spending (£)</td><td class="n">2,979.03</td><td class="n">880.38</td><td class="n">213,304,900</td><td class="n">14,604.96</td><td class="n">25.58</td></tr>
+      </tbody></table></div>
+      <p class="note">Purchase counts have a variance-to-mean ratio of about 26. Mean customer spending is more than three times the median.</p></div>
+  </div>
+  <div class="sec">
+    <h3>EDA charts from the notebook</h3>
+    <p>Pick a chart. Each is the original notebook output, with the finding the notebook recorded.</p>
+    <div class="chips" id="eda-chips"></div>
+    <div class="grid21" id="eda-view"></div>
+  </div>
+  <div class="sec">
+    <h3>Top five products and countries</h3>
+    <div class="grid2">
+      <div class="card"><h3>Top 5 countries by sales</h3><div id="ctry"></div><p class="note">41 countries in total. The UK dominates, so results are UK-weighted.</p></div>
+      <div class="card"><h3>Top 5 products by revenue (dashboard)</h3><div id="prod"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- POISSON -->
+<section class="panel" id="p-poisson" role="tabpanel" hidden>
+  <div class="ph">
+    <div class="kicker">Distribution 1 of 3 · Count model</div>
+    <h2>Poisson: monthly purchases per customer</h2>
+    <p>Counts of invoices per customer per month, including zero-purchase months between a customer's first and last purchase month. A Poisson model needs variance equal to the mean. Here the variance is almost twice the mean.</p>
+    <span class="src">Poisson_Fitting.ipynb</span><span class="verdict">Poisson fit rejected</span>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>56,944</b><span>Customer-month records</span></div>
+    <div class="stat"><b>32,055</b><span>Zero-purchase months</span></div>
+    <div class="stat"><b>0.6290</b><span>Estimated λ</span></div>
+    <div class="stat"><b>1.9792</b><span>Dispersion ratio</span></div>
+    <div class="stat"><b>9,691.83</b><span>χ² (df 4), p &lt; 0.001</span></div>
+    <div class="stat"><b>128,292.59</b><span>AIC</span></div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap"><h3 style="margin:0">Observed vs expected, interactive</h3>
+        <div class="seg" id="po-scale"><button aria-pressed="true" data-v="lin">Linear</button><button aria-pressed="false" data-v="log">Log scale</button></div></div>
+      <div id="po-chart" style="margin-top:0.8rem"></div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>Observed</span><span><i style="background:var(--teal)"></i>Expected under Poisson</span></div>
+      <div class="readout" id="po-read">Hover a pair of bars. Switch to log scale to see the tail.</div>
+    </div>
+    <figure class="fig"><div class="frame"><img class="zoom" src="nb/poisson_14.png" alt="Observed versus expected Poisson frequencies" loading="lazy"></div>
+      <figcaption>Original notebook chart. <code>Poisson_Fitting.ipynb</code>, cell 14. Large gaps appear between observed and fitted frequencies, especially in the high-count tail.</figcaption></figure>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Chi-square groups (expected ≥ 5)</h3>
+      <div class="tw"><table><thead><tr><th>Purchases</th><th class="n">Observed</th><th class="n">Expected</th></tr></thead><tbody>
+        <tr><td>0</td><td class="n">32,055</td><td class="n">30,358.13</td></tr>
+        <tr><td>1</td><td class="n">18,862</td><td class="n">19,095.38</td></tr>
+        <tr><td>2</td><td class="n">3,968</td><td class="n">6,005.54</td></tr>
+        <tr><td>3</td><td class="n">1,141</td><td class="n">1,259.17</td></tr>
+        <tr><td>4</td><td class="n">399</td><td class="n">198.01</td></tr>
+        <tr class="hl"><td>5 or more</td><td class="n">519</td><td class="n">27.78</td></tr>
+      </tbody></table></div>
+      <p class="note">Mean 0.6290, variance 1.2449. Degrees of freedom are 6 groups − 1 − 1 estimated parameter = 4. Customers with five or more purchases in a month are about 19 times more common than Poisson allows.</p></div>
+    <div class="card"><h3>Reading the result</h3>
+      <p>Poisson is a useful baseline but not an adequate overall count model. Ignoring different purchase rates across customers distorts forecasts for both inactive and frequent customers, which is what the mixture model in the later tabs addresses.</p>
+      <p class="note">The monthly panel covers December 2009 to November 2011, 24 complete months, 35,818 invoices. December 2011 is dropped because the data ends on 9 December.</p></div>
+  </div>
+</section>
+
+<!-- GEOMETRIC -->
+<section class="panel" id="p-geometric" role="tabpanel" hidden>
+  <div class="ph">
+    <div class="kicker">Distribution 2 of 3 · Waiting-time model</div>
+    <h2>Geometric: days until a customer's second purchase</h2>
+    <p>Customers who had not returned by the end of the data are right-censored, and the estimate uses them. A single daily return probability is compared against a Kaplan–Meier survival curve.</p>
+    <span class="src">Geometric_Fitting.ipynb</span><span class="verdict">Constant rate not supported</span>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>5,848</b><span>Customers</span></div>
+    <div class="stat"><b>4,177</b><span>Observed returns (71.43%)</span></div>
+    <div class="stat"><b>1,671</b><span>Right-censored</span></div>
+    <div class="stat"><b>1,031,215</b><span>Customer-days at risk</span></div>
+    <div class="stat"><b>0.004051</b><span>MLE daily p</span></div>
+    <div class="stat"><b>246.88</b><span>Model mean wait, days</span></div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3>Cumulative return probability, observed vs Geometric</h3>
+      <div id="ge-chart"></div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>Observed</span><span><i style="background:var(--teal)"></i>Geometric model</span></div>
+      <div class="readout" id="ge-read">Hover the chart. Points are the six checkpoints the notebook reports.</div>
+    </div>
+    <div class="card">
+      <h3>Daily return hazard by interval</h3>
+      <div id="ge-haz"></div>
+      <div class="readout" id="ge-hazread">Hover a bar. The dashed line is the constant Geometric hazard, 0.004051.</div>
+      <p class="note">The hazard is highest in the first month and falls to 0.00249 after day 90, so a single constant rate does not describe the timing.</p>
+    </div>
+  </div>
+  <div class="sec">
+    <h3>Original notebook charts</h3>
+    <div class="chips" id="ge-chips"></div>
+    <div class="grid21" id="ge-view"></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Constant vs two-phase hazard</h3>
+      <div class="tw"><table><thead><tr><th>Model</th><th class="n">Parameters</th><th class="n">AIC</th><th class="n">BIC</th></tr></thead><tbody>
+        <tr><td>Geometric, constant hazard</td><td class="n">1</td><td class="n">54,360.41</td><td class="n">54,367.08</td></tr>
+        <tr class="hl"><td>Two-phase hazard</td><td class="n">2</td><td class="n">53,997.69</td><td class="n">54,011.04</td></tr></tbody></table></div>
+      <p class="note">Two-phase daily return probabilities: early 0.007113, late 0.003503. Lower AIC and BIC favour the two-phase model.</p></div>
+    <div class="card"><h3>Fitted model quantities</h3>
+      <div class="tw"><table><tbody>
+        <tr><td>95% bootstrap interval for p</td><td class="n">0.003899 to 0.004222</td></tr>
+        <tr><td>Model variance</td><td class="n">60,702.53</td></tr>
+        <tr><td>P(return within 7 days)</td><td class="n">2.80%</td></tr>
+        <tr><td>P(return within 30 days)</td><td class="n">11.46%</td></tr>
+        <tr><td>Observed returners: mean / median</td><td class="n">106.18 / 63 days</td></tr>
+        <tr><td>Observed returners: std. dev. / max</td><td class="n">114.68 / 714 days</td></tr>
+      </tbody></table></div>
+      <p class="note">The model's 247-day mean and the returners' 106-day mean cannot be compared directly, because the observed mean leaves out censored customers. A narrow bootstrap interval shows p is estimated precisely. It does not show the model is right.</p></div>
+  </div>
+</section>
+
+<!-- GAMMA -->
+<section class="panel" id="p-gamma" role="tabpanel" hidden>
+  <div class="ph">
+    <div class="kicker">Distribution 3 of 3 · Spending model</div>
+    <h2>Gamma and Lognormal: invoice amounts</h2>
+    <p>Both families are fitted by maximum likelihood to all 36,594 positive invoice amounts, so their AIC and BIC can be compared. Lognormal wins on both.</p>
+    <span class="src">Gamma_Fitting.ipynb · monte_carlo.ipynb</span><span class="verdict ok">Lognormal preferred</span>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>36,594</b><span>Invoices</span></div>
+    <div class="stat"><b>£476.40</b><span>Mean</span></div>
+    <div class="stat"><b>£304.64</b><span>Median</span></div>
+    <div class="stat"><b>1.0152</b><span>Gamma shape α</span></div>
+    <div class="stat"><b>469.279</b><span>Gamma scale θ</span></div>
+    <div class="stat"><b>5.5987 / 1.0705</b><span>Lognormal μ / σ</span></div>
+  </div>
+  <div class="figs">
+    <figure class="fig"><div class="frame"><img class="zoom" src="nb/gamma_8.png" alt="Observed versus fitted Gamma distribution" loading="lazy"></div>
+      <figcaption>Original notebook chart. <code>Gamma_Fitting.ipynb</code>, cell 5 (histogram to the 99th percentile). The fitted curve misses the central peak and the upper tail.</figcaption></figure>
+    <figure class="fig"><div class="frame"><img class="zoom" src="nb/gamma_10.png" alt="Gamma Q-Q plot" loading="lazy"></div>
+      <figcaption>Original notebook chart. <code>Gamma_Fitting.ipynb</code>, cell 6. Points leave the dashed 45° line in the upper quantiles.</figcaption></figure>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Model comparison</h3>
+      <div class="tw"><table><thead><tr><th>Model</th><th class="n">AIC</th><th class="n">BIC</th></tr></thead><tbody>
+        <tr><td>Gamma</td><td class="n">524,482.28</td><td class="n">524,499.29</td></tr>
+        <tr class="hl"><td>Lognormal</td><td class="n">518,591.05</td><td class="n">518,608.06</td></tr></tbody></table></div>
+      <h3 style="margin-top:1.25rem">Gamma: MLE vs method of moments</h3>
+      <div class="tw"><table><thead><tr><th>Method</th><th class="n">Shape</th><th class="n">Scale</th></tr></thead><tbody>
+        <tr><td>Maximum likelihood</td><td class="n">1.0152</td><td class="n">469.279</td></tr>
+        <tr><td>Method of moments</td><td class="n">0.1202</td><td class="n">3,964.10</td></tr></tbody></table></div>
+      <p class="note">The fitted Gamma variance is 223,563 against an observed 1,888,534. The two estimators disagree because the sample variance is driven by a few very large invoices.</p></div>
+    <div class="card"><h3>Tail probability explorer</h3>
+      <p style="font-size:0.9rem;color:var(--muted)">Drag the threshold to see the probability of an invoice above it under each fitted model. Values are computed here from the fitted parameters.</p>
+      <div style="margin-top:1rem"><label for="tail-t" style="font:500 0.8rem var(--font-mono)">Invoice above £<span id="tail-v">1000</span></label>
+        <input id="tail-t" type="range" min="200" max="5000" step="50" value="1000"></div>
+      <div style="margin-top:0.8rem">
+        <div class="hb" style="grid-template-columns:minmax(0,7rem) minmax(0,1fr) 5rem"><span class="l">Gamma</span><span class="t"><i class="amber" id="tail-g" style="width:0"></i></span><span class="v" id="tail-gv"></span></div>
+        <div class="hb" style="grid-template-columns:minmax(0,7rem) minmax(0,1fr) 5rem"><span class="l">Lognormal</span><span class="t"><i id="tail-l" style="width:0"></i></span><span class="v" id="tail-lv"></span></div>
+        <div class="hb" style="grid-template-columns:minmax(0,7rem) minmax(0,1fr) 5rem" id="tail-orow"><span class="l">Observed</span><span class="t"><i class="teal" style="width:7.35%"></i></span><span class="v">7.35%</span></div>
+      </div>
+      <p class="note" id="tail-note"></p></div>
+  </div>
+  <div class="callout"><b>£1,000 check from the notebook.</b> Gamma predicts 12.18% of invoices above £1,000, and 7.35% are. The explorer also shows the fitted Lognormal at about 11.1% there, so it still overstates that tail even though it fits better overall. Observed shares are only available at £1,000, which is why the Observed bar appears only there.</div>
+</section>
+
+<!-- MIXTURE -->
+<section class="panel" id="p-mixture" role="tabpanel" hidden>
+  <div class="ph">
+    <div class="kicker">Gaussian mixture model</div>
+    <h2>Nine customer segments</h2>
+    <p>Purchase count and average invoice amount are log-transformed, standardised and clustered for the 5,824 customers active in the 24 complete months. AIC and BIC both pick nine components. One small segment carries about 37% of spending.</p>
+    <span class="src">Joint_Poisson_Lognormal_Mixture.ipynb</span><span class="verdict ok">9 components</span>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>5,824</b><span>Customers</span></div>
+    <div class="stat"><b>−3,109.38</b><span>AIC, 9 components</span></div>
+    <div class="stat"><b>−2,755.89</b><span>BIC, 9 components</span></div>
+    <div class="stat"><b>95.27%</b><span>Avg assignment confidence</span></div>
+    <div class="stat"><b>0.2121</b><span>Spearman, count vs avg invoice</span></div>
+  </div>
+  <div class="sec">
+    <h3>Segment explorer</h3>
+    <p>Pick a segment, or click a table row.</p>
+    <div class="chips" id="sg-chips"></div>
+    <div class="grid2">
+      <div class="card" id="sg-card"></div>
+      <div class="card"><h3>All segments</h3><div class="tw"><table id="sg-table"></table></div>
+        <p class="note">Shares are calculated from the table. The size-weighted mean of segment spending is £2,905.25, which equals the overall customer mean.</p></div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Model selection: AIC and BIC by components</h3>
+      <div id="ms-chart"></div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>AIC</span><span><i style="background:var(--teal)"></i>BIC</span></div>
+      <div class="readout" id="ms-read">Hover the chart. Both criteria are lowest at 9 components.</div></div>
+    <div class="card"><h3>Assignment confidence</h3>
+      <div class="hb" style="grid-template-columns:minmax(0,8rem) minmax(0,1fr) 4.5rem"><span class="l">High, 80% or more</span><span class="t"><i class="teal" style="width:100%"></i></span><span class="v">5,374</span></div>
+      <div class="hb" style="grid-template-columns:minmax(0,8rem) minmax(0,1fr) 4.5rem"><span class="l">Moderate</span><span class="t"><i style="width:5.5%"></i></span><span class="v">297</span></div>
+      <div class="hb" style="grid-template-columns:minmax(0,8rem) minmax(0,1fr) 4.5rem"><span class="l">Low, under 60%</span><span class="t"><i class="amber" style="width:2.85%"></i></span><span class="v">153</span></div>
+      <p class="note">Median confidence is 0.99997 and the lowest is 0.35. High confidence shows the groups are well separated. The CLV tab checks whether they predict anything.</p>
+      <h3 style="margin-top:1.25rem">Correlations</h3>
+      <div class="tw"><table><thead><tr><th></th><th class="n">Purchases</th><th class="n">Avg invoice</th><th class="n">Total</th></tr></thead><tbody>
+        <tr><td>Purchases</td><td class="n">1.000</td><td class="n">0.077</td><td class="n">0.628</td></tr>
+        <tr><td>Avg invoice</td><td class="n">0.077</td><td class="n">1.000</td><td class="n">0.303</td></tr>
+        <tr><td>Total spend</td><td class="n">0.628</td><td class="n">0.303</td><td class="n">1.000</td></tr></tbody></table></div></div>
+  </div>
+  <div class="sec"><h3>Original notebook charts</h3>
+    <div class="figs">
+      <figure class="fig"><div class="frame"><img class="zoom" src="nb/mixture_5.png" alt="Purchase frequency versus average spending" loading="lazy"></div><figcaption><code>Joint_Poisson_Lognormal_Mixture.ipynb</code>, cell 5. A few customers have very large average invoices.</figcaption></figure>
+      <figure class="fig"><div class="frame"><img class="zoom" src="nb/mixture_6.png" alt="Frequency and spending on log scale" loading="lazy"></div><figcaption>Cell 6. On the log scale frequency and spending rise together with wide spread.</figcaption></figure>
+      <figure class="fig"><div class="frame"><img class="zoom" src="nb/mixture_12.png" alt="Nine customer segments" loading="lazy"></div><figcaption>Cell 12. The nine segments in log purchase count and log average invoice.</figcaption></figure>
+      <figure class="fig"><div class="frame"><img class="zoom" src="nb/mixture_14.png" alt="Customer assignment confidence" loading="lazy"></div><figcaption>Cell 14. Assignment confidence by category.</figcaption></figure>
+    </div></div>
+</section>
+
+<!-- CLV -->
+<section class="panel" id="p-clv" role="tabpanel" hidden>
+  <div class="ph">
+    <div class="kicker">Customer lifetime value</div>
+    <h2>Three-month CLV validation</h2>
+    <p>The mixture is refitted on January to August 2011 for 4,205 customers who bought in 2010, then used to predict September to November 2011 revenue. A one-group model is the baseline. CLV here means three-month expected revenue, not discounted lifetime profit.</p>
+    <span class="src">CLV_Modelling.ipynb</span><span class="verdict ok">28.4% lower MAE</span>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>4,205</b><span>Customers in cohort</span></div>
+    <div class="stat"><b>8,068 / 4,426</b><span>Train / test invoices</span></div>
+    <div class="stat"><b>2,009</b><span>No purchase in training</span></div>
+    <div class="stat"><b>2,374</b><span>No purchase in test</span></div>
+    <div class="stat"><b>£2.399M</b><span>Actual 3-month revenue</span></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Predicted vs actual revenue</h3><div id="clv-rev"></div>
+      <h3 style="margin-top:1.25rem">Error per customer</h3><div id="clv-err"></div>
+      <p class="note">MAE is 28.4% lower with segments, RMSE 12.7% lower. Both forecasts still come in below actual; the segment model is 35.2% short in total.</p></div>
+    <figure class="fig"><div class="frame"><img class="zoom" src="nb/clv_8.png" alt="Predicted versus actual three-month revenue" loading="lazy"></div>
+      <figcaption>Original notebook chart. <code>CLV_Modelling.ipynb</code>, cell 8.</figcaption></figure>
+  </div>
+  <div class="sec">
+    <h3>Group explorer</h3>
+    <p>These groups are refitted on the training data, so their numbers differ from the Mixture tab. Group 1 is the 2,009 customers with no training purchases, so its predicted revenue is zero.</p>
+    <div class="chips" id="cl-chips"></div>
+    <div class="grid2">
+      <div class="card" id="cl-card"></div>
+      <div class="card"><h3>Expected 3-month revenue per customer, by group</h3><div id="cl-bars"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- MONTE CARLO -->
+<section class="panel" id="p-montecarlo" role="tabpanel" hidden>
+  <div class="ph">
+    <div class="kicker">Monte Carlo simulation</div>
+    <h2>Twelve-month revenue forecast</h2>
+    <p>Each of 1,000 runs draws a Poisson number of purchases for every customer from their own monthly rate, then draws each invoice from the fitted Lognormal and adds everything up. The spread across runs is the forecast range.</p>
+    <span class="src">monte_carlo.ipynb · monte_carlo_customer_clv.csv</span><span class="verdict">Model-based range</span>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>£8,675,562</b><span>Expected 12-month revenue</span></div>
+    <div class="stat"><b>£8.46M</b><span>Lower 95%</span></div>
+    <div class="stat"><b>£8.90M</b><span>Upper 95%</span></div>
+    <div class="stat"><b>1,000</b><span>Simulations</span></div>
+    <div class="stat"><b>3.88%</b><span>Mean error vs theoretical CLV</span></div>
+  </div>
+  <div class="grid2">
+    <figure class="fig"><div class="frame"><img class="zoom" src="nb/mc_7.png" alt="Monte Carlo total future revenue" loading="lazy"></div>
+      <figcaption>Original notebook chart. <code>monte_carlo.ipynb</code>, cell 7. Total simulated 12-month revenue across 5,852 customers. Interval £8,460,816.91 to £8,903,107.47.</figcaption></figure>
+    <figure class="fig"><div class="frame"><img class="zoom" src="nb/mc_6.png" alt="Customer CLV distribution for customer 12346" loading="lazy"></div>
+      <figcaption>Cell 6. Simulated CLV for customer 12346: mean £708.64, many runs near zero and a few large ones.</figcaption></figure>
+  </div>
+  <div class="sec">
+    <h3>Customer lookup</h3>
+    <p>Search any customer ID from the notebook's output file. Rates are purchases divided by 24.25 observed months; invoice values use Lognormal μ 5.5987 and σ 1.0705.</p>
+    <div class="grid2">
+      <div class="card">
+        <form class="search" id="mc-form"><input id="mc-id" inputmode="numeric" placeholder="Customer ID, e.g. 12347" aria-label="Customer ID"><button type="submit">Look up</button></form>
+        <div id="mc-out" style="margin-top:1rem"><p class="note">Loading customer file…</p></div>
+      </div>
+      <div class="card"><h3>Top 10 customers by predicted 12-month CLV</h3><div class="tw"><table id="mc-top"></table></div>
+        <p class="note" id="mc-sum"></p></div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDES -->
+<section class="panel" id="p-slides" role="tabpanel" hidden>
+  <div class="ph">
+    <div class="kicker">Project presentation</div>
+    <h2>The slide deck</h2>
+    <p>All 31 slides. Use the arrow keys or the buttons, or pick a slide below.</p>
+    <span class="src">Customer_Purchasing_Behaviour_With_Cleaning_And_Statistics.pdf</span>
+  </div>
+  <div class="deck">
+    <div class="deck-main"><img id="dk-img" class="zoom" src="slides/s-01.jpg" width="1280" height="720" alt="Slide 1"></div>
+    <div class="deck-ctl"><button id="dk-prev">← Previous</button><span id="dk-n">Slide 1 of 31</span><button id="dk-next">Next →</button></div>
+    <div class="thumbs" id="dk-thumbs"></div>
+  </div>
+</section>
+
+</main>
+<footer><div class="wrap">Probabilistic Modelling of Customer Purchasing Behaviour · Applied Probability Distributions · Symbiosis Statistical Institute, AY 2026–27 · Team: Pranjal, Arnab, Aarya, Mahek. Charts are the original notebook outputs; tables are copied from notebook output cells.</div></footer>
+
+<div class="lb" id="lb" role="dialog" aria-label="Image viewer"><button id="lb-x">Close</button><img id="lb-img" alt=""></div>
+
+<script>
+(function () {
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var fmt = function (n, d) { return Number(n).toLocaleString('en-GB', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 }); };
+  var gbp = function (n, d) { return '£' + fmt(n, d == null ? 0 : d); };
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs, parent) { var e = document.createElementNS(SVGNS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+  function h(html) { var d = document.createElement('div'); d.innerHTML = html; return d.firstElementChild; }
+  function hbars(host, rows) {
+    host.innerHTML = rows.map(function (r) {
+      return '<div class="hb"><span class="l">' + r.l + '</span><span class="t"><i class="' + (r.c || '') + '" style="width:' + r.w + '%"></i></span><span class="v">' + r.v + '</span></div>';
+    }).join('');
+  }
+  function chips(host, labels, current, onPick) {
+    host.innerHTML = '';
+    labels.forEach(function (lab, i) {
+      var b = h('<button class="chip" aria-pressed="' + (i === current) + '"></button>'); b.textContent = lab;
+      b.addEventListener('click', function () { onPick(i); }); host.appendChild(b);
+    });
+  }
+  function setPressed(host, idx) { Array.prototype.forEach.call(host.children, function (c, i) { c.setAttribute('aria-pressed', i === idx); }); }
+
+  /* tabs and hash routing */
+  var TABS = [['overview', 'Overview'], ['dashboard', 'Dashboard'], ['data', 'Data & EDA'], ['poisson', 'Poisson'], ['geometric', 'Geometric'], ['gamma', 'Gamma & Lognormal'], ['mixture', 'Mixture'], ['clv', 'CLV'], ['montecarlo', 'Monte Carlo'], ['slides', 'Slides']];
+  var tabsHost = $('#tabs');
+  TABS.forEach(function (t) {
+    var b = h('<button class="tab" role="tab" aria-selected="false"></button>'); b.textContent = t[1]; b.dataset.t = t[0];
+    b.addEventListener('click', function () { location.hash = t[0]; }); tabsHost.appendChild(b);
+  });
+  function show() {
+    var id = (location.hash || '').replace('#', ''); if (!TABS.some(function (t) { return t[0] === id; })) id = 'overview';
+    TABS.forEach(function (t) { $('#p-' + t[0]).hidden = t[0] !== id; });
+    Array.prototype.forEach.call(tabsHost.children, function (b) { var on = b.dataset.t === id; b.setAttribute('aria-selected', on); if (on && b.scrollIntoView) b.scrollIntoView({ inline: 'nearest', block: 'nearest' }); });
+    window.scrollTo(0, 0);
+  }
+  window.addEventListener('hashchange', show);
+
+  /* overview flow */
+  var FLOW = [['dashboard', 'Dashboard', 'The four Power BI report pages.', 'Open'], ['data', 'Data & EDA', 'Cleaning pipeline, statistics and eight EDA charts.', 'Open'], ['poisson', 'Poisson', 'Counts per month. Dispersion 1.98, fit rejected.', 'Open'], ['geometric', 'Geometric', 'Waiting time to a second purchase, with censoring.', 'Open'], ['gamma', 'Gamma & Lognormal', 'Invoice amounts. Lognormal fits better.', 'Open'], ['mixture', 'Mixture', 'Nine segments with an explorer.', 'Open'], ['clv', 'CLV', 'Three-month validation against actuals.', 'Open'], ['montecarlo', 'Monte Carlo', '12-month revenue with a customer lookup.', 'Open'], ['slides', 'Slides', 'The 31-slide project deck.', 'Open']];
+  FLOW.forEach(function (f) {
+    var li = h('<li><button><b></b><span></span><em>Open →</em></button></li>'); li.querySelector('b').textContent = f[1]; li.querySelector('span').textContent = f[2];
+    li.querySelector('button').addEventListener('click', function () { location.hash = f[0]; }); $('#flow').appendChild(li);
+  });
+
+  /* lightbox */
+  var lb = $('#lb'), lbImg = $('#lb-img');
+  document.addEventListener('click', function (e) { var t = e.target; if (t.tagName === 'IMG' && t.classList.contains('zoom')) { lbImg.src = t.src; lbImg.alt = t.alt; lb.classList.add('on'); $('#lb-x').focus(); } });
+  function closeLb() { lb.classList.remove('on'); }
+  lb.addEventListener('click', function (e) { if (e.target !== lbImg) closeLb(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeLb(); });
+
+  /* dashboard */
+  var PBI = [
+    ['Overview', 'img/dash-1.jpg', 'Retail Performance Overview', ['£17.43M merchandise sales', '36,594 invoices across 5,852 customers', 'UK dominates total revenue', 'Customer purchasing is highly uneven'], 'Filters: year, country, order date. KPI tiles for revenue, orders, customers, average order value and units (11M). Monthly revenue with order volume, top 5 countries, top 5 products and purchase frequency against spending.'],
+    ['Distribution', 'img/dash-2.jpg', 'Probability Distribution Lab', ['Poisson: overdispersion indicates a poor fit', 'Gamma vs Lognormal: Lognormal has lower AIC and BIC', 'Geometric: constant return probability does not fully explain return timing', 'Behaviour needs more flexible probabilistic models'], 'Model buttons for Gamma, Geometric, Lognormal and Poisson drive a Model Inspector. Four observed-versus-expected charts and the Gamma vs Lognormal AIC and BIC table.'],
+    ['Mixture', 'img/dash-3.jpg', 'Customer Mixture Intelligence', ['9-component Gaussian mixture, 5,824 customers', 'Average assignment confidence 95.27%', 'GMM AIC −3.11K, BIC −2.76K', 'Segment 6 has the highest expected spending, about £56K'], 'Segment and confidence filters, a segment scatter, model-selection curve, customer composition by segment and conditional expected spending by segment.'],
+    ['Simulation & CLV', 'img/dash-4.jpg', 'Monte Carlo Simulation & Customer Lifetime Value', ['Monte Carlo: £8.68M expected revenue, 95% interval £8.46M to £8.90M', 'Group-based CLV: 28.4% lower MAE than baseline', '1,000 simulations, 5,852 customers, 12 months', 'CLV validation: 4,205 customers, Sep to Nov 2011'], 'Simulated revenue distribution, purchase frequency against simulated customer value, actual versus predicted three-month revenue, MAE and RMSE, and average predicted CLV by group.']
+  ];
+  var pbiTabs = $('#pbi-tabs');
+  function pbiShow(i) {
+    var p = PBI[i]; $('#pbi-img').src = p[1]; $('#pbi-img').alt = p[2] + ' dashboard page'; $('#pbi-title').textContent = 'Page ' + (i + 1) + ' of 4 · ' + p[2];
+    Array.prototype.forEach.call(pbiTabs.children, function (b, j) { b.setAttribute('aria-selected', j === i); });
+    $('#pbi-notes').innerHTML = '<div class="card"><h3>Key takeaways on this page</h3><ul style="margin:0;padding-left:1.1rem">' + p[3].map(function (x) { return '<li style="margin-bottom:0.4rem">' + x + '</li>'; }).join('') + '</ul></div><div class="card"><h3>What the page contains</h3><p>' + p[4] + '</p></div>';
+  }
+  PBI.forEach(function (p, i) { var b = h('<button role="tab" aria-selected="false"></button>'); b.textContent = p[0]; b.addEventListener('click', function () { pbiShow(i); }); pbiTabs.appendChild(b); });
+  pbiShow(0);
+
+  /* data tab */
+  hbars($('#clean-bars'), [
+    { l: 'Raw transaction lines', w: 100, v: '1,067,371' }, { l: 'Initial cleaning', w: 75.22, v: '802,900' }, { l: 'Remove carriage fees', w: 75.2, v: '802,647' },
+    { l: 'Remove test products', w: 75.2, v: '802,637' }, { l: 'Remove accounting adjustments', w: 75.2, v: '802,634' }, { l: 'Final cleaning', w: 75.19, v: '802,555', c: 'teal' }]);
+  hbars($('#ctry'), [{ l: 'United Kingdom', w: 100, v: '£14.62M', c: 'teal' }, { l: 'EIRE', w: 4.05, v: '£0.59M', c: 'teal' }, { l: 'Netherlands', w: 3.76, v: '£0.55M', c: 'teal' }, { l: 'Germany', w: 2.66, v: '£0.39M', c: 'teal' }, { l: 'France', w: 2.16, v: '£0.32M', c: 'teal' }]);
+  hbars($('#prod'), [{ l: 'Regency Cakestand 3 Tier', w: 100, v: '£0.29M' }, { l: 'White Hanging Heart T-Light Holder', w: 86.2, v: '£0.25M' }, { l: 'Paper Craft, Little Birdie', w: 58.6, v: '£0.17M' }, { l: 'Jumbo Bag Red Retrospot', w: 48.3, v: '£0.14M' }, { l: 'Assorted Colour Bird Ornament', w: 44.8, v: '£0.13M' }]);
+  var EDA = [
+    ['Invoice amounts', 'eda_5', 'Distribution of invoice amounts (histogram)', 'Mean £476.40 is above the median £304.64. Most invoices are modest and a long right tail motivates Gamma and Lognormal fitting. The histogram shows values up to the 99th percentile.'],
+    ['Invoice boxplot', 'eda_7', 'Boxplot of invoice amounts, log scale', 'Numerous high-value outliers may be genuine bulk orders, so valid extremes are kept and models are judged on their upper-tail behaviour.'],
+    ['Purchase counts', 'eda_9', 'Distribution of customer purchase counts', 'Mean 6.25 against variance 162.54, a ratio of 25.99. Strong heterogeneity and overdispersion.'],
+    ['Frequency vs spending', 'eda_11', 'Purchase frequency vs total spending, log scales', 'Spending rises with frequency, but customers with similar counts differ widely, which supports joint segmentation.'],
+    ['Monthly sales', 'eda_13', 'Monthly total sales', 'Peaks in later months of 2010 and 2011 suggest seasonality, but 25 observed months include incomplete boundary months.'],
+    ['Monthly invoices', 'eda_15', 'Monthly number of purchase invoices', 'Invoice counts rise in the same periods as revenue, so transaction frequency changes over time, which challenges a static-rate model.'],
+    ['Waiting times', 'eda_17', 'Time between consecutive purchases', '30,742 intervals. Median 25.03 days, mean 52.12 days, with a long right tail.'],
+    ['Countries', 'eda_19', 'Top 10 countries by total sales', 'The UK dominates sales. EIRE, Netherlands, Germany and France are much smaller, so interpretation is UK-weighted.']
+  ];
+  var edaView = $('#eda-view');
+  function edaShow(i) {
+    var e = EDA[i]; setPressed($('#eda-chips'), i);
+    edaView.innerHTML = '<figure class="fig"><div class="frame"><img class="zoom" src="nb/' + e[1] + '.png" alt="' + e[2] + '"></div><figcaption><code>EDA.ipynb</code> · ' + e[2] + '</figcaption></figure><div class="card"><h3>Finding</h3><p>' + e[3] + '</p></div>';
+  }
+  chips($('#eda-chips'), EDA.map(function (e) { return e[0]; }), 0, edaShow); edaShow(0);
+
+  /* poisson */
+  var PO = { o: [32055, 18862, 3968, 1141, 399, 179, 125, 50, 40, 125], e: [30358.1, 19095.4, 6005.5, 1259.2, 198.0, 24.9, 2.6, 0.2, 0.0, 0.0], lab: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9+'] };
+  var poLog = false;
+  function drawPo() {
+    var host = $('#po-chart'); host.innerHTML = '';
+    var W = 520, H = 280, L = 44, B = 28, T = 10, R = 8, pw = W - L - R, ph = H - T - B;
+    var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, class: 'ch', role: 'img', 'aria-label': 'Observed versus expected Poisson frequencies' }, host);
+    var f = function (v) { return poLog ? Math.log10(v + 1) : v; };
+    var max = poLog ? 5 : 35000;
+    var ticks = poLog ? [0, 1, 2, 3, 4, 5] : [0, 10000, 20000, 30000];
+    ticks.forEach(function (t) {
+      var y = T + ph - (t / max) * ph; el('line', { x1: L, x2: W - R, y1: y, y2: y, class: 'grid' }, svg);
+      var tx = el('text', { x: L - 6, y: y + 4, 'text-anchor': 'end' }, svg); tx.textContent = poLog ? (t === 0 ? '0' : '10^' + t) : fmt(t);
+    });
+    var gw = pw / PO.o.length;
+    PO.lab.forEach(function (lab, i) {
+      var g = el('g', {}, svg), x0 = L + i * gw + gw * 0.12, bw = gw * 0.38;
+      [[PO.o[i], 'bar-o', 0], [PO.e[i], 'bar-e', 1]].forEach(function (b) {
+        var hh = (f(b[0]) / max) * ph; el('rect', { x: x0 + b[2] * bw, y: T + ph - hh, width: bw - 1, height: Math.max(hh, b[0] > 0 ? 1 : 0), class: b[1] }, g);
+      });
+      var tx = el('text', { x: L + i * gw + gw / 2, y: H - 10, 'text-anchor': 'middle' }, svg); tx.textContent = lab;
+      var hit = el('rect', { x: L + i * gw, y: T, width: gw, height: ph, class: 'hit' }, svg);
+      hit.addEventListener('mouseenter', function () { $('#po-read').innerHTML = '<b>' + lab + ' purchases</b> in a month · observed <b>' + fmt(PO.o[i]) + '</b> · expected <b>' + fmt(PO.e[i], 1) + '</b>' + (PO.e[i] > 0 && PO.o[i] / PO.e[i] > 2 ? ' · about <b>' + fmt(PO.o[i] / PO.e[i], 0) + '×</b> more than Poisson allows' : ''); });
+    });
+    var xt = el('text', { x: L + pw / 2, y: H + 4, 'text-anchor': 'middle' }, svg); xt.textContent = '';
+  }
+  Array.prototype.forEach.call($('#po-scale').children, function (b) { b.addEventListener('click', function () { poLog = b.dataset.v === 'log'; Array.prototype.forEach.call($('#po-scale').children, function (c) { c.setAttribute('aria-pressed', c === b); }); drawPo(); }); });
+  drawPo();
+
+  /* generic line chart */
+  function lineChart(host, series, o) {
+    host.innerHTML = ''; var W = 520, H = 290, L = 54, R = 12, T = 10, B = 34, pw = W - L - R, ph = H - T - B;
+    var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, class: 'ch', role: 'img', 'aria-label': o.label }, host);
+    var sx = function (x) { return L + (x - o.x0) / (o.x1 - o.x0) * pw; }, sy = function (y) { return T + ph - (y - o.y0) / (o.y1 - o.y0) * ph; };
+    o.yt.forEach(function (t) { el('line', { x1: L, x2: W - R, y1: sy(t), y2: sy(t), class: 'grid' }, svg); var tx = el('text', { x: L - 6, y: sy(t) + 4, 'text-anchor': 'end' }, svg); tx.textContent = o.yf(t); });
+    o.xt.forEach(function (t) { var tx = el('text', { x: sx(t), y: H - 16, 'text-anchor': 'middle' }, svg); tx.textContent = t; });
+    var xl = el('text', { x: L + pw / 2, y: H - 2, 'text-anchor': 'middle' }, svg); xl.textContent = o.xl;
+    series.forEach(function (s) {
+      el('polyline', { points: s.pts.map(function (p) { return sx(p[0]) + ',' + sy(p[1]); }).join(' '), fill: 'none', stroke: s.color, 'stroke-width': 2.2, 'stroke-linejoin': 'round' }, svg);
+      s.pts.forEach(function (p) { el('circle', { cx: sx(p[0]), cy: sy(p[1]), r: 3, fill: s.color }, svg); });
+    });
+    var mark = el('line', { y1: T, y2: T + ph, stroke: 'var(--muted)', 'stroke-dasharray': '3 3', opacity: 0 }, svg);
+    var hit = el('rect', { x: L, y: T, width: pw, height: ph, class: 'hit' }, svg), xs = series[0].pts.map(function (p) { return p[0]; });
+    function move(ev) {
+      var r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) / r.width * W, best = 0, bd = 1e9;
+      xs.forEach(function (x, i) { var d = Math.abs(sx(x) - px); if (d < bd) { bd = d; best = i; } });
+      mark.setAttribute('x1', sx(xs[best])); mark.setAttribute('x2', sx(xs[best])); mark.setAttribute('opacity', 1); o.read(best);
+    }
+    hit.addEventListener('mousemove', move); hit.addEventListener('click', move); hit.addEventListener('touchstart', function (e) { move(e.touches[0]); }, { passive: true });
+  }
+
+  /* geometric */
+  var GD = [0, 7, 14, 30, 60, 90, 180], GO = [0, .05, .1024, .1923, .3523, .4503, .6151], GG = [0, .028, .0552, .1146, .2161, .306, .5184];
+  lineChart($('#ge-chart'), [
+    { color: 'var(--teal)', pts: GD.map(function (d, i) { return [d, GG[i]]; }) }, { color: 'var(--accent)', pts: GD.map(function (d, i) { return [d, GO[i]]; }) }
+  ], { label: 'Observed and Geometric cumulative return probability', x0: 0, x1: 180, y0: 0, y1: 0.7, xt: [0, 30, 60, 90, 120, 150, 180], yt: [0, .2, .4, .6], yf: function (v) { return Math.round(v * 100) + '%'; }, xl: 'Days since first purchase',
+    read: function (i) { $('#ge-read').innerHTML = '<b>Day ' + GD[i] + '</b> · observed <b>' + (GO[i] * 100).toFixed(2) + '%</b> · Geometric <b>' + (GG[i] * 100).toFixed(2) + '%</b> · gap <b>' + ((GO[i] - GG[i]) * 100).toFixed(2) + ' points</b>'; } });
+  var HZ = [['1–7', 292, 40085, 0.007285], ['8–30', 821, 116386, 0.007054], ['31–90', 1431, 218998, 0.006534], ['91–737', 1633, 655746, 0.00249]];
+  (function () {
+    var host = $('#ge-haz'), H = 220;
+    host.innerHTML = '<div style="position:relative;height:' + H + 'px;border-bottom:1px solid var(--line)"><div id="hz-line" style="position:absolute;left:0;right:0;border-top:2px dashed var(--amber);bottom:' + (0.004051 / 0.008 * 100) + '%"></div><div style="position:absolute;inset:0;display:flex;align-items:flex-end;gap:14px" id="hz-bars"></div></div><div style="display:flex;gap:14px;margin-top:0.4rem" id="hz-lab"></div>';
+    HZ.forEach(function (r, i) {
+      var b = h('<div style="flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;cursor:pointer"><b style="font:500 0.72rem var(--font-mono);text-align:center;margin-bottom:3px"></b><i style="display:block;background:var(--accent);border-radius:3px 3px 0 0;height:' + (r[3] / 0.008 * 100) + '%"></i></div>');
+      b.querySelector('b').textContent = r[3].toFixed(4);
+      b.addEventListener('mouseenter', function () { $('#ge-hazread').innerHTML = '<b>Days ' + r[0] + '</b> · ' + fmt(r[1]) + ' returns in ' + fmt(r[2]) + ' customer-days · hazard <b>' + r[3].toFixed(6) + '</b>'; });
+      $('#hz-bars').appendChild(b);
+      var l = h('<span style="flex:1;min-width:0;text-align:center;font:400 0.72rem var(--font-mono);color:var(--muted)"></span>'); l.textContent = r[0]; $('#hz-lab').appendChild(l);
+    });
+  })();
+  var GE = [['Waiting times', 'geometric_4', 'Observed waiting time until repeat purchase', 'Histogram of days to the second purchase for the 4,177 customers who returned.'], ['Fitted PMF', 'geometric_8', 'Fitted Geometric probability distribution', 'The fitted daily probability declines slowly from about 0.0040 over the first 120 days.'], ['Survival', 'geometric_10', 'Empirical vs Geometric survival function', 'Observed Kaplan–Meier survival drops faster than the Geometric curve in the early months and crosses it near day 300.'], ['Hazard', 'geometric_12', 'Return hazard across waiting-time intervals', 'Daily return probability is about 0.007 for the first 90 days and 0.0025 after, against a constant 0.004051.'], ['Bootstrap', 'geometric_14', 'Bootstrap distribution of the Geometric parameter', '95% bootstrap interval for p: 0.003899 to 0.004222.']];
+  function geShow(i) { var e = GE[i]; setPressed($('#ge-chips'), i); $('#ge-view').innerHTML = '<figure class="fig"><div class="frame"><img class="zoom" src="nb/' + e[1] + '.png" alt="' + e[2] + '"></div><figcaption><code>Geometric_Fitting.ipynb</code> · ' + e[2] + '</figcaption></figure><div class="card"><h3>What it shows</h3><p>' + e[3] + '</p></div>'; }
+  chips($('#ge-chips'), GE.map(function (e) { return e[0]; }), 0, geShow); geShow(0);
+
+  /* gamma tail explorer */
+  function lgam(z) { var c = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.001208650973866179, -0.000005395239384953], x = z, y = z, t = x + 5.5; t -= (x + 0.5) * Math.log(t); var s = 1.000000000190015; for (var j = 0; j < 6; j++) s += c[j] / ++y; return -t + Math.log(2.5066282746310005 * s / x); }
+  function gammaQ(a, x) {
+    if (x <= 0) return 1; var gln = lgam(a);
+    if (x < a + 1) { var ap = a, sum = 1 / a, del = sum; for (var n = 0; n < 300; n++) { ap++; del *= x / ap; sum += del; if (Math.abs(del) < Math.abs(sum) * 1e-12) break; } return 1 - sum * Math.exp(-x + a * Math.log(x) - gln); }
+    var b = x + 1 - a, c = 1e300, d = 1 / b, hh = d; for (var i = 1; i < 300; i++) { var an = -i * (i - a); b += 2; d = an * d + b; if (Math.abs(d) < 1e-300) d = 1e-300; c = b + an / c; if (Math.abs(c) < 1e-300) c = 1e-300; d = 1 / d; var del2 = d * c; hh *= del2; if (Math.abs(del2 - 1) < 1e-12) break; }
+    return Math.exp(-x + a * Math.log(x) - gln) * hh;
+  }
+  function erfc(x) { var z = Math.abs(x), t = 1 / (1 + 0.5 * z), r = t * Math.exp(-z * z - 1.26551223 + t * (1.00002368 + t * (0.37409196 + t * (0.09678418 + t * (-0.18628806 + t * (0.27886807 + t * (-1.13520398 + t * (1.48851587 + t * (-0.82215223 + t * 0.17087277))))))))); return x >= 0 ? r : 2 - r; }
+  function tail() {
+    var t = +$('#tail-t').value, g = gammaQ(1.0152, t / 469.279), l = 0.5 * erfc((Math.log(t) - 5.5987) / 1.0705 / Math.SQRT2);
+    $('#tail-v').textContent = fmt(t); $('#tail-g').style.width = Math.min(g * 100, 100) + '%'; $('#tail-l').style.width = Math.min(l * 100, 100) + '%';
+    $('#tail-gv').textContent = (g * 100).toFixed(2) + '%'; $('#tail-lv').textContent = (l * 100).toFixed(2) + '%'; $('#tail-orow').style.display = t === 1000 ? '' : 'none';
+    $('#tail-note').textContent = l > g ? 'Beyond about £1,500 the Lognormal puts more probability in the tail than the Gamma.' : 'At this threshold the Gamma puts more probability in the tail than the Lognormal.';
+  }
+  $('#tail-t').addEventListener('input', tail); tail();
+
+  /* mixture */
+  var SG = [[611, 10.49, 19.45, 17, 373.70, 338.50, 7327.34], [1647, 28.28, 1.00, 1, 348.32, 233.40, 348.32], [644, 11.06, 3.00, 3, 339.33, 282.05, 1018.00], [757, 13.00, 8.72, 8, 378.96, 317.65, 3335.54], [273, 4.69, 6.00, 6, 351.79, 291.95, 2110.76], [351, 6.03, 5.00, 5, 351.07, 295.42, 1755.33], [110, 1.89, 59.27, 46.5, 1650.34, 950.00, 56366.77], [491, 8.43, 4.00, 4, 331.82, 269.20, 1327.27], [940, 16.14, 2.00, 2, 342.82, 264.73, 685.65]];
+  var TOT = SG.reduce(function (s, r) { return s + r[0] * r[6]; }, 0), sgSel = 6;
+  var sgTable = $('#sg-table');
+  sgTable.innerHTML = '<thead><tr><th>Segment</th><th class="n">Customers</th><th class="n">Avg purchases</th><th class="n">Avg total spend</th><th class="n">Share of spend</th></tr></thead><tbody></tbody>';
+  SG.forEach(function (r, i) {
+    var tr = h('<table><tr class="row-click"><td class="mono">' + i + '</td><td class="n">' + fmt(r[0]) + '</td><td class="n">' + r[2].toFixed(2) + '</td><td class="n">' + gbp(r[6], 2) + '</td><td class="n">' + (r[0] * r[6] / TOT * 100).toFixed(1) + '%</td></tr></table>').querySelector('tr');
+    tr.addEventListener('click', function () { sgShow(i); }); sgTable.querySelector('tbody').appendChild(tr);
+  });
+  function sgShow(i) {
+    sgSel = i; setPressed($('#sg-chips'), i); Array.prototype.forEach.call(sgTable.querySelectorAll('tbody tr'), function (tr, j) { tr.classList.toggle('hl', j === i); });
+    var r = SG[i], share = r[0] * r[6] / TOT * 100;
+    $('#sg-card').innerHTML = '<h3>Segment ' + i + '</h3><div class="stats" style="margin-top:0;grid-template-columns:repeat(2,minmax(0,1fr))"><div class="stat"><b>' + fmt(r[0]) + '</b><span>Customers (' + r[1].toFixed(1) + '%)</span></div><div class="stat"><b>' + gbp(r[6], 2) + '</b><span>Avg total spend</span></div><div class="stat"><b>' + r[2].toFixed(2) + '</b><span>Avg purchases (median ' + r[3] + ')</span></div><div class="stat"><b>' + gbp(r[4], 2) + '</b><span>Avg invoice (median ' + gbp(r[5], 2) + ')</span></div></div>' +
+      '<div class="sp"><div style="font:400 0.72rem var(--font-mono);color:var(--muted)">Share of customers · ' + r[1].toFixed(1) + '%</div><div class="t"><i style="width:' + r[1] + '%;background:var(--teal)"></i></div><div style="font:400 0.72rem var(--font-mono);color:var(--muted);margin-top:0.4rem">Share of total spending · ' + share.toFixed(1) + '%</div><div class="t"><i style="width:' + share + '%;background:var(--accent)"></i></div></div>';
+  }
+  chips($('#sg-chips'), SG.map(function (_, i) { return 'Segment ' + i; }), 6, sgShow); sgShow(6);
+  var MS = { n: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], aic: [32786.72, 17928.80, 16839.93, 16361.52, 8970.65, 4257.23, 906.70, -1367.93, -3109.38, -1655.53], bic: [32820.07, 18002.17, 16953.32, 16514.92, 9164.07, 4490.67, 1180.16, -1054.46, -2755.89, -1262.02] };
+  lineChart($('#ms-chart'), [
+    { color: 'var(--teal)', pts: MS.n.map(function (n, i) { return [n, MS.bic[i]]; }) }, { color: 'var(--accent)', pts: MS.n.map(function (n, i) { return [n, MS.aic[i]]; }) }
+  ], { label: 'AIC and BIC by number of mixture components', x0: 1, x1: 10, y0: -5000, y1: 35000, xt: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], yt: [0, 10000, 20000, 30000], yf: function (v) { return v / 1000 + 'K'; }, xl: 'Components',
+    read: function (i) { $('#ms-read').innerHTML = '<b>' + MS.n[i] + ' components</b> · AIC <b>' + fmt(MS.aic[i], 2) + '</b> · BIC <b>' + fmt(MS.bic[i], 2) + '</b>' + (MS.n[i] === 9 ? ' · lowest of both' : ''); } });
+
+  /* clv */
+  hbars($('#clv-rev'), [{ l: 'Actual', w: 100, v: '£2.399M', c: 'teal' }, { l: 'Segment-based CLV', w: 64.8, v: '£1.554M' }, { l: 'One-group baseline', w: 59.7, v: '£1.432M', c: 'amber' }]);
+  hbars($('#clv-err'), [{ l: 'MAE, baseline', w: 100, v: '£651.42', c: 'amber' }, { l: 'MAE, segment-based', w: 71.6, v: '£466.47' }, { l: 'RMSE, baseline', w: 100, v: '£3,377.92', c: 'amber' }, { l: 'RMSE, segment-based', w: 87.3, v: '£2,949.57' }]);
+  var CL = [[46, 0.12, 5.64, 1.62, 1056.98, 396.37], [2009, 0.0, null, null, null, 0.0], [185, 0.50, 5.54, 1.02, 426.87, 640.30], [49, 3.03, 5.74, 1.52, 983.97, 8943.63], [164, 1.29, 5.55, 0.91, 389.62, 1511.88], [422, 0.25, 5.51, 0.94, 381.35, 286.01], [295, 0.38, 5.62, 0.93, 424.27, 477.31], [766, 0.13, 5.51, 0.63, 301.97, 113.24], [269, 0.73, 5.53, 0.98, 408.72, 892.49]];
+  var clMax = Math.max.apply(null, CL.map(function (r) { return r[5]; }));
+  function clShow(i) {
+    setPressed($('#cl-chips'), i); var r = CL[i], zero = r[2] === null;
+    $('#cl-card').innerHTML = '<h3>Group ' + i + '</h3><div class="stats" style="margin-top:0;grid-template-columns:repeat(2,minmax(0,1fr))"><div class="stat"><b>' + fmt(r[0]) + '</b><span>Customers</span></div><div class="stat"><b>' + r[1].toFixed(2) + '</b><span>Monthly purchase rate</span></div><div class="stat"><b>' + (zero ? 'n/a' : gbp(r[4], 2)) + '</b><span>Expected invoice</span></div><div class="stat"><b>' + gbp(r[5], 2) + '</b><span>Expected 3-month revenue</span></div></div>' + (zero ? '<p class="note">No customer in this group bought during the training months, so no invoice distribution is fitted and predicted revenue is zero.</p>' : '<p class="note">Lognormal μ ' + r[2].toFixed(2) + ', σ ' + r[3].toFixed(2) + '. Revenue = 3 months × rate × expected invoice.</p>');
+    $('#cl-bars').innerHTML = CL.map(function (g, j) { return '<div class="hb" style="grid-template-columns:minmax(0,5rem) minmax(0,1fr) 5.5rem' + '"><span class="l">Group ' + j + '</span><span class="t"><i class="' + (j === i ? '' : 'teal') + '" style="width:' + (g[5] / clMax * 100) + '%"></i></span><span class="v">' + gbp(g[5], 2) + '</span></div>'; }).join('');
+  }
+  chips($('#cl-chips'), CL.map(function (_, i) { return 'Group ' + i; }), 3, clShow); clShow(3);
+
+  /* monte carlo */
+  var MC = null;
+  fetch('data/monte_carlo_customer_clv.csv').then(function (r) { return r.text(); }).then(function (txt) {
+    var lines = txt.trim().split('\n'); MC = {};
+    for (var i = 1; i < lines.length; i++) { var c = lines[i].split(','); MC[c[0]] = { n: +c[1], rate: +c[2], clv: +c[3], sd: +c[4], lo: +c[5], hi: +c[6] }; }
+    var ids = Object.keys(MC), sum = ids.reduce(function (s, k) { return s + MC[k].clv; }, 0);
+    var top = ids.sort(function (a, b) { return MC[b].clv - MC[a].clv; }).slice(0, 10);
+    $('#mc-top').innerHTML = '<thead><tr><th>Customer</th><th class="n">Purchases</th><th class="n">Predicted CLV</th></tr></thead><tbody>' + top.map(function (k) { return '<tr class="row-click" data-id="' + k + '"><td class="mono">' + k + '</td><td class="n">' + MC[k].n + '</td><td class="n">' + gbp(MC[k].clv, 2) + '</td></tr>'; }).join('') + '</tbody>';
+    Array.prototype.forEach.call($('#mc-top').querySelectorAll('tr[data-id]'), function (tr) { tr.addEventListener('click', function () { $('#mc-id').value = tr.dataset.id; look(tr.dataset.id); }); });
+    $('#mc-sum').textContent = ids.length.toLocaleString('en-GB') + ' customers in the file. Their predicted CLVs add up to ' + gbp(sum, 2) + ', the notebook\'s expected 12-month revenue. Click a row to look the customer up.';
+    $('#mc-out').innerHTML = '<p class="note">Enter a customer ID or click a row in the table.</p>'; look('12346'); $('#mc-id').value = '12346';
+  }).catch(function () { $('#mc-out').innerHTML = '<p class="note">The customer file could not be loaded.</p>'; });
+  function look(id) {
+    var r = MC && MC[String(id).trim()], out = $('#mc-out');
+    if (!MC) return; if (!r) { out.innerHTML = '<p class="note">No customer with that ID in the file. IDs run from 12346 upward.</p>'; return; }
+    var max = Math.max(r.hi * 1.08, 1), pct = function (v) { return (v / max * 100).toFixed(2) + '%'; };
+    out.innerHTML = '<h4>Customer ' + String(id).trim() + '</h4><div class="stats" style="margin-top:0.6rem;grid-template-columns:repeat(2,minmax(0,1fr))"><div class="stat"><b>' + gbp(r.clv, 2) + '</b><span>Predicted 12-month CLV</span></div><div class="stat"><b>' + gbp(r.sd, 2) + '</b><span>Simulation std. dev.</span></div><div class="stat"><b>' + r.n + '</b><span>Historical purchases</span></div><div class="stat"><b>' + r.rate.toFixed(4) + '</b><span>Monthly rate λ</span></div></div>' +
+      '<div class="iv"><div class="tr"></div><div class="rg" style="left:' + pct(r.lo) + ';width:' + (((r.hi - r.lo) / max) * 100).toFixed(2) + '%"></div><div class="mn" style="left:' + pct(r.clv) + '"></div><span class="ivl" style="left:0">£0</span><span class="ivl" style="right:0">' + gbp(max, 0) + '</span></div>' +
+      '<p class="note">95% simulation interval ' + gbp(r.lo, 2) + ' to ' + gbp(r.hi, 2) + '. The marker is the mean. ' + (r.lo === 0 ? 'The interval starts at zero because at least 2.5% of runs had no purchase.' : '') + '</p>';
+  }
+  $('#mc-form').addEventListener('submit', function (e) { e.preventDefault(); look($('#mc-id').value); });
+
+  /* slides */
+  var N = 31, dk = 0, thumbs = $('#dk-thumbs');
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  for (var i = 1; i <= N; i++) (function (i) {
+    var b = h('<button aria-label="Slide ' + i + '" aria-current="false"><img loading="lazy" src="slides/s-' + pad(i) + '.jpg" alt="" width="1280" height="720"></button>');
+    b.addEventListener('click', function () { dkShow(i - 1); }); thumbs.appendChild(b);
+  })(i);
+  function dkShow(i) {
+    dk = Math.max(0, Math.min(N - 1, i)); var im = $('#dk-img'); im.src = 'slides/s-' + pad(dk + 1) + '.jpg'; im.alt = 'Slide ' + (dk + 1);
+    $('#dk-n').textContent = 'Slide ' + (dk + 1) + ' of ' + N; $('#dk-prev').disabled = dk === 0; $('#dk-next').disabled = dk === N - 1;
+    Array.prototype.forEach.call(thumbs.children, function (b, j) { b.setAttribute('aria-current', j === dk); });
+  }
+  $('#dk-prev').addEventListener('click', function () { dkShow(dk - 1); }); $('#dk-next').addEventListener('click', function () { dkShow(dk + 1); });
+  document.addEventListener('keydown', function (e) { if (location.hash === '#slides' && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) { if (e.key === 'ArrowRight') dkShow(dk + 1); if (e.key === 'ArrowLeft') dkShow(dk - 1); } });
+  dkShow(0);
+
+  show();
+})();
+</script>
+
+</body></html>
