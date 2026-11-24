@@ -64,4 +64,4 @@ Python and Jupyter notebooks, Power BI with DAX. Methods: maximum likelihood est
 
 - Repository: https://github.com/pranjal30-27/customer-purchasing-behaviour
 - Dashboard: https://github.com/pranjal30-27/customer-purchasing-behaviour/main/retail_dashboard.pbix
-- Presentation deck: https://github.com/pranjal30-27/customer-purchasing-behaviour/main/customer_purchasing_behaviour.pdf
+- Presentation deck: https://github.com/pranjal30-27/customer-purchasing-behaviour/main/Customer_Purchasing_Behaviour.pptx
